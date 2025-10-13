@@ -23,7 +23,7 @@ void testAddition(){
     std::cout << "----Passed\n" << std::endl;
 }
 
-void testIncrementation(){
+void testAdditionAssignment(){
     std::cout << "----Incrementation test" << std::endl;
     
     std::cout << "\tclass + class" << std::endl;
@@ -39,14 +39,28 @@ void testIncrementation(){
     std::cout << "----Passed\n" << std::endl;
 }
 
+void testIncrementation(){
+    std::cout << "----Incrementation test" << std::endl;
+
+    std::cout << "\tPrefix increment" << std::endl;
+    String a("somethingelse");
+    assert(++a == "tpnfuijohfmtf");
+
+    std::cout << "\tPostfix increment" << std::endl;
+    String b("somethingelse");
+    assert(b++ == "somethingelse");
+    assert(b == "tpnfuijohfmtf");
+
+    std::cout << "----Passed\n" << std::endl;
+}
+
 void testIndex(){
     std::cout << "----Index access test" << std::endl;
 
     String a("something");
     assert(a[0] == 's');
-    //a[1] = 'a';
-    //assert(a == "samething");
-
+    a[1] = 'a';
+    assert(a == "samething");
 
     std::cout << "----Passed\n" << std::endl;
 }
@@ -76,10 +90,11 @@ void testIO(){
 
 int main(){
     testAddition();
+    testAdditionAssignment();
     testIncrementation();
     testIndex();
     testSubstring();
-    //testIO();
+    testIO();
     std::cout << "All tests have passed" << std::endl;
     return 0;
 }

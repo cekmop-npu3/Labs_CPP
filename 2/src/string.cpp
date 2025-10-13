@@ -62,11 +62,20 @@ String& String::operator+=(const char* literal){
     return *this;
 }
 
-char String::operator[](int index) const {
-    while (index < 0)
-        index = this->len + index;
-    if (index > this->len - 1)
-        return '\0';
+String& String::operator++(){
+    for (int i = 0; i < this->len; i++)
+        ++this->data[i];
+    return *this;
+}
+
+String String::operator++(int){
+    String result = *this;
+    for (int i = 0; i < this->len; i++)
+        ++this->data[i];
+    return result;
+}
+
+char& String::operator[](int index) const {
     return this->data[index];
 }
 
@@ -79,15 +88,19 @@ String String::operator()(int start, int end) const {
     return result;
 }
 
-bool String::operator==(const String& other){
+bool String::operator==(const String& other) const {
     return !strcmp(this->data, other.data);
 }
 
-bool String::operator<(const String& other){
+bool String::operator!=(const String& other) const {
+    return !(*this == other);
+}
+
+bool String::operator<(const String& other) const {
     return this->len < other.len;
 }
 
-bool String::operator>(const String& other){
+bool String::operator>(const String& other) const {
     return this->len > other.len;
 }
 

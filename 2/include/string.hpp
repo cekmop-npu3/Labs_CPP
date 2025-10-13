@@ -22,12 +22,16 @@ class String {
         String& operator+=(const String& other);
         String& operator+=(const char* literal);
 
-        char operator[](int index) const;
+        String& operator++();
+        String operator++(int);
+
+        char& operator[](int index) const;
         String operator()(int start, int stop) const;
 
-        bool operator==(const String& other);
-        bool operator<(const String& other);
-        bool operator>(const String& other);
+        bool operator==(const String& other) const;
+        bool operator!=(const String& other) const;
+        bool operator<(const String& other) const;
+        bool operator>(const String& other) const;
 
         friend std::ostream& operator<<(std::ostream& ostream, const String& other);
         friend std::istream& operator>>(std::istream& istream, String& other);
