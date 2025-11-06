@@ -1,183 +1,201 @@
 #ifndef __ARRAY_H__
 #define __ARRAY_H__
 
-#include <stdlib.h>
-#include <variant>
-#include "iter.hpp"
-#include "error.hpp"
 #include <iostream>
-#include <variant>
-
-namespace {
-    int BUF_SIZE = 4;
-    int BUF_COUNT = 3;
-}
-
-using namespace std;
+#include <functional>
 
 
 template<class T>
-class Array;
-template<typename N>
-using Elem = std::variant<N, Array<N>*>;
+class List;
 
 
-template<class T>
-class Array : public Iter<Elem<T>> {
+template<class N>
+class Node {
     private:
-        Elem<T>* data;
-        int len;
-        int bufSize;
-        int bufCount;
+        N data;
+        Node* prev = nullptr;
+        Node* next = nullptr;
     public:
-        Array(int bufSize = BUF_SIZE, int bufCount = BUF_COUNT) : Iter<Elem<T>>(data, len) {
-            this->data = new Elem<T>[bufSize]{};
-            this->bufSize = bufSize;
-            this->bufCount = bufCount;
-            this->len = 0;
-        }
-        Array(const Array& other) : Iter<Elem<T>>(data, len) {
-            if (this != &other){
-                this->data = new Elem<T>[other.bufSize * (other.len / other.bufSize + 1)]{};
-                for (int i = 0; i < other.len; i++){
-                    if (holds_alternative<Array*>(other.data[i])){
-                        Array *arr = new Array();
-                        *arr = *std::get<Array*>(other.data[i]);
-                        this->data[i] = arr;
-                    }
-                    else
-                        this->data[i] = other.data[i];
-                }
-                this->bufSize = other.bufSize;
-                this->bufCount = other.bufCount;
-                this->len = other.len;
-            }
-        }
-        Array& operator=(const Array& other){
-            if (this != &other){
-                delete[] this->data;
-                this->data = new Elem<T>[other.bufSize * (other.len / other.bufSize + 1)]{};
-                for (int i = 0; i < other.len; i++){
-                    if (holds_alternative<Array<T>*>(other.data[i])){
-                        Array *arr = new Array<T>();
-                        *arr = *get<Array<T>*>(other.data[i]);
-                        this->data[i] = arr;
-                    }
-                    else
-                        this->data[i] = other.data[i];
+        Node(N data) : data(data) {}
+        friend List<N>;
+};
 
+
+template<typename T>
+class List {
+    private:
+        Node<T>* head = nullptr;
+        Node<T>* tail = nullptr;
+        int size = 0;
+
+        Node<T>* getNode(int index) const {
+            if (index < 0 || index >= size)
+                throw std::out_of_range("Index out of range");
+            Node<T>* current;
+            if (index < size / 2) { 
+                current = head;
+                for (int i = 0; i < index; i++)
+                    current = current->next;
+            }
+            else { 
+                current = tail;
+                for (int i = size - 1; i > index; i--)
+                    current = current->prev;
+            }
+            return current;
+        }
+
+    public:
+        List() = default;
+
+        List(const List& other) {
+            Node<T>* current = other.head;
+            while (current != nullptr) {
+                push_back(current->data);
+                current = current->next;
+            }
+        }
+
+        List& operator=(const List& other) {
+            if (this != &other) {
+                while (this->head != nullptr) {
+                    Node<T>* temp = this->head;
+                    this->head = this->head->next;
+                    delete temp;
                 }
-                this->bufSize = other.bufSize;
-                this->bufCount = other.bufCount;
-                this->len = other.len;
+                this->tail = nullptr;
+                this->size = 0;
+                Node<T>* current = other.head;
+                while (current != nullptr) {
+                    push_back(current->data);
+                    current = current->next;
+                }
             }
             return *this;
         }
-        Array& operator-=(const Array& other){
-            Elem<T> elem;
-            for (int i = this->len - 1; i >= 0; i--){
-                for (int j = 0; j < other.len; j++){
-                    if ((holds_alternative<Array<T>*>(this->data[i]) &&
-                         holds_alternative<Array<T>*>(other.data[j]) &&
-                        (*get<Array<T>*>(this->data[i]) == *get<Array<T>*>(other.data[j]))) || 
-                        (holds_alternative<T>(this->data[i]) &&
-                         holds_alternative<T>(other.data[j]) &&
-                         this->data[i] == other.data[j]))
-                    {
-                        if (holds_alternative<Array<T>*>(elem = this->pop(i)))
-                            delete get<Array<T>*>(elem);
-                        break;
-                    }
-                }
+
+        ~List() {
+            while (this->head != nullptr) {
+                Node<T>* temp = head;
+                this->head = this->head->next;
+                delete temp;
             }
-            return *this;
+            this->tail = nullptr;
+            this->size = 0;
         }
-        Array operator-(const Array& other){
-            Array<T> result(this->bufSize, this->bufCount);
-            bool equal;
-            for (int i = 0; i < this->len; i++){
-                equal = false;
-                for (int j = 0; j < other.len; j++)
-                    if ((holds_alternative<Array<T>*>(this->data[i]) &&
-                                holds_alternative<Array<T>*>(other.data[j]) &&
-                                (*get<Array<T>*>(this->data[i]) == *get<Array<T>*>(other.data[j]))) || 
-                            (holds_alternative<T>(this->data[i]) &&
-                             holds_alternative<T>(other.data[j]) &&
-                             this->data[i] == other.data[j]))
-                    {
-                        equal = true;
-                        break;
-                    }
-                if (!equal)
-                    result.append(holds_alternative<Array<T>*>(this->data[i]) ? *get<Array<T>*>(this->data[i]) : get<T>(this->data[i]));
+
+        void insert(T data, int index) {
+            if (index < 0 || index > this->size)
+                throw std::out_of_range("Index out of range");
+            Node<T>* newNode = new Node(data);
+            if (!this->size)
+                this->head = this->tail = newNode;
+            else if (!index) { 
+                newNode->next = this->head;
+                this->head->prev = newNode;
+                this->head = newNode;
             }
-            return result;
+            else if (index == size) { 
+                this->tail->next = newNode;
+                newNode->prev = this->tail;
+                this->tail = newNode;
+            }
+            else { 
+                Node<T>* current = getNode(index);
+                newNode->prev = current->prev;
+                newNode->next = current;
+                current->prev->next = newNode;
+                current->prev = newNode;
+            }
+            this->size++;
         }
-        Elem<T>& operator[](int index) const{
-            while (index < 0)
-                index = this->len + index;
-            if (index > this->len - 1)
-                throw ArrayError{"Array index out of range"};
-            return this->data[index];
+
+        T pop(int index) {
+            if (index < 0 || index >= this->size)
+                throw std::out_of_range("Index out of range");
+            Node<T>* toRemove;
+            T removedData;
+            if (this->size == 1) { 
+                toRemove = this->head;
+                this->head = this->tail = nullptr;
+            } else if (index == 0) { 
+                toRemove = this->head;
+                this->head = this->head->next;
+                this->head->prev = nullptr;
+            } else if (index == this->size - 1) { 
+                toRemove = this->tail;
+                this->tail = this->tail->prev;
+                this->tail->next = nullptr;
+            } else { 
+                toRemove = getNode(index);
+                toRemove->prev->next = toRemove->next;
+                toRemove->next->prev = toRemove->prev;
+            }
+            removedData = toRemove->data;
+            delete toRemove;
+            this->size--;
+            return removedData;
         }
-        bool operator==(const Array& other) const {
-            if (this->len != other.len)
+
+        int find(std::function<bool(const T&)> find_function) const {
+            Node<T>* current = this->head;
+            int index = 0;
+            while (current != nullptr) {
+                if (find_function(current->data))
+                    return index;
+                current = current->next;
+                index++;
+            }
+            return -1; 
+        }
+
+        T& operator[](int index) {
+            return getNode(index)->data;
+        }
+
+        const T& operator[](int index) const {
+            return getNode(index)->data;
+        }
+
+        friend std::ostream& operator<<(std::ostream& os, const List& list) {
+            Node<T>* current = list.head;
+            os << "[";
+            while (current != nullptr) {
+                os << current->data;
+                if (current->next != nullptr)
+                    os << ", ";
+                current = current->next;
+            }
+            return os << "]" << std::endl;
+        }
+
+        bool operator==(const List& other) const {
+            if (this->size != other.size)
                 return false;
-            for (int i = 0; i < this->len; i++)
-                if ((holds_alternative<Array<T>*>(this->data[i]) && !(*get<Array<T>*>(this->data[i]) == *get<Array<T>*>(other.data[i]))) || 
-                    (holds_alternative<T>(this->data[i]) && this->data[i] != other.data[i])
-                   )
+            Node<T>* current1 = this->head;
+            Node<T>* current2 = other.head;
+            while (current1 != nullptr && current2 != nullptr) {
+                if (current1->data != current2->data)
                     return false;
+                current1 = current1->next;
+                current2 = current2->next;
+            }
             return true;
         }
-        ~Array(){
-            for (int i = 0; i < this->len; i++)
-                if (holds_alternative<Array<T>*>(this->data[i]))
-                    delete get<Array<T>*>(this->data[i]);
-            delete[] this->data;
-            this->len = 0;
+
+        bool operator!=(const List& other) const {
+            return !(*this == other);
         }
-        void append(std::variant<T, Array<T>> data){
-            if (this->len / this->bufSize == this->bufCount)
-                throw ArrayError{"Memory block limit is reached"};
-            if (!((this->len + 1) % this->bufSize) and (this->len + 1) / this->bufSize != this->bufCount){
-                Elem<T> *tmpData = new Elem<T>[this->bufSize * ((this->len + 1) / this->bufSize + 1)]{};
-                copy(this->data, this->data + this->len, tmpData);
-                delete[] this->data;
-                this->data = tmpData;
-            }
-            if (holds_alternative<Array<T>>(data)){
-                Array<T> *tmp = new Array<T>();
-                *tmp = std::get<Array<T>>(data);
-                this->data[this->len++] = tmp;
-            }
-            else
-                this->data[this->len++] = std::get<T>(data);
+
+        size_t getSize() const {
+            return this->size;
         }
-        Elem<T> pop(int index = -1){
-            while (index < 0)
-                index = this->len + index;
-            if (index > this->len - 1)
-                throw ArrayError{"Array index out of range"};
-            Elem<T> elem = this->data[index];
-            for (int i = 0; i < this->len - 1; i++)
-                this->data[i] = (i >= index ? this->data[i + 1] : this->data[i]);
-            this->len--;
-            return elem;
-        }
-        void print(bool wrapped = false) const {
-            cout << "[";
-            for (int i = 0; i < this->len; i++){
-                if (holds_alternative<T>(this->data[i]))
-                    cout << get<T>(this->data[i]);
-                else 
-                    get<Array<T>*>(this->data[i])->print(true);
-                if (i != this->len - 1)
-                    cout << ", ";
-            }
-            cout << "]" << (wrapped ? "" : "\n");
+
+        bool isEmpty() const {
+            return !this->size;
         }
 };
+
 
 #endif
 
