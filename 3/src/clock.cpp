@@ -27,7 +27,7 @@ std::string Clock::getType() const {
 }
 
 void Clock::printInfo(std::ostream& os, bool cr) const {
-    os << "{type: " << getType() << ", brand: " << brand << ", price: " << price << "weight: " << weight << (cr ? "}" : ", ");
+    os << "{type: " << getType() << ", brand: " << brand << ", price: " << price << ", weight: " << weight << (cr ? "}" : ", ");
 }
 
 std::ostream& operator<<(std::ostream& os, const Clock& clock){
